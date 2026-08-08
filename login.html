@@ -1,0 +1,31 @@
+<div id="lock-screen">
+    <div class="login-box">
+        <!-- লোগো URL পরিবর্তন করুন -->
+        <img src="https://i.ibb.co.com/zhYVV82d/photo-6302877040054572652-x.jpg" alt="Bot Logo" class="login-logo">
+        
+        <h2 style="font-family:'Orbitron'; color:white; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">Bot Access</h2>
+        
+        <form id="loginForm">
+            <div class="input-wrapper">
+                <span class="icon">✈️</span>
+                <input type="text" id="tgUser" class="login-input" placeholder="Telegram Username (@user)" required autocomplete="off">
+            </div>
+            
+            <div class="input-wrapper">
+                <span class="icon">🔑</span>
+                <input type="password" id="accessKey" class="login-input" placeholder="Access Key" required>
+            </div>
+
+            <button type="submit" class="login-btn" id="loginBtn">
+                <span>UNLOCK BOT</span>
+            </button>
+            
+            <p id="errorMsg" class="error-msg"></p>
+            <p id="loadingMsg" class="loading-text">Verifying Secure Connection...</p>
+        </form>
+        
+        <div class="footer-note">
+            <p>Secure Gateway by TradeR SiaM</p>
+        </div>
+    </div>
+</div>
