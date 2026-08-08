@@ -332,6 +332,6 @@ function checkSession() {
         localStorage.removeItem('phoenixBotJoined');
         localStorage.removeItem('phoenixBotLoginTime');
         alert('Your session has expired. Please login again.');
-        window.location.href = 'index.html';
+        window.location.href = 'https://raw.githubusercontent.com/seyam4431-ai/faltu/refs/heads/main/login.html';
     }
 }
