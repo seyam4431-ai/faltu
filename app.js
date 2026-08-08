@@ -1,4 +1,9 @@
-// Currency pairs data
+// গ্লোবাল ভেরিয়েবল (ফাংশনের বাইরে ডিক্লেয়ার কিন্তু ভ্যালু ফাংশনের ভেতরে আসাইন হবে)
+let currentMarket = 'otc';
+let selectedTimeframe = 5;
+let sessionInterval = null;
+
+// Currency pairs data (এটি অপরিবর্তিত থাকবে)
 const currencyPairs = {
     otc: [
         "NZD/CHF (OTC)", "USD/BRL (OTC)", "EUR/GBP (OTC)", "GBP/AUD (OTC)",
@@ -24,25 +29,17 @@ const currencyPairs = {
     ]
 };
 
-// State management
-let currentMarket = 'otc';
-let selectedTimeframe = 5;
-let sessionInterval = null;
-
-// DOM Elements (Global scope e rakha hocche jate initializeApp e access kora jay)
-let marketTabs, currencySelect, timeframeBtns, getSignalBtn, signalDisplay, loadingAnimation;
-
-// Main Initialization Function (এটি login.js থেকে কল হবে)
+// এই ফাংশনটি login.js থেকে কল করা হবে যখন লগইন সফল হবে
 window.initializeApp = function() {
-    console.log("App Initializing...");
+    console.log("🚀 Initializing App...");
 
-    // Session Check
+    // ১. Session Validation
     const hasJoined = localStorage.getItem('phoenixBotJoined');
     const loginTime = localStorage.getItem('phoenixBotLoginTime');
     
     if (hasJoined !== 'true' || !loginTime) {
-        alert("Session not found. Please login again.");
-        location.reload(); // Reload to show login
+        console.warn("Session not found. Reloading...");
+        location.reload();
         return;
     }
     
@@ -58,55 +55,73 @@ window.initializeApp = function() {
         return;
     }
 
-    // Setup Session Checker
-    if (sessionInterval) clearInterval(sessionInterval);
-    sessionInterval = setInterval(checkSession, 60000);
+    // ২. DOM Elements সিলেক্ট করা (এখন নিশ্চিত যে এগুলো ডোমে আছে)
+    const marketTabs = document.querySelectorAll('.market-tab');
+    const currencySelect = document.getElementById('currencySelect');
+    const timeframeBtns = document.querySelectorAll('.timeframe-btn');
+    const getSignalBtn = document.getElementById('getSignalBtn');
+    const signalDisplay = document.getElementById('signalDisplay');
+    const loadingAnimation = document.getElementById('loadingAnimation');
+    const postSignalPopup = document.getElementById('postSignalPopup');
 
-    // Initialize DOM Elements (এখন এগুলো নিশ্চিতভাবে ডোমে আছে)
-    marketTabs = document.querySelectorAll('.market-tab');
-    currencySelect = document.getElementById('currencySelect');
-    timeframeBtns = document.querySelectorAll('.timeframe-btn');
-    getSignalBtn = document.getElementById('getSignalBtn');
-    signalDisplay = document.getElementById('signalDisplay');
-    loadingAnimation = document.getElementById('loadingAnimation');
-
-    if (!getSignalBtn || !signalDisplay) {
-        console.error("Critical App Elements Missing!");
+    // চেক করা যাতে গুরুত্বপূর্ণ এলিমেন্ট missing না থাকে
+    if (!getSignalBtn || !signalDisplay || !currencySelect) {
+        console.error("❌ Critical App Elements Missing! Check app.html structure.");
         return;
     }
 
-    // Event Listeners
+    console.log("✅ DOM Elements Found. Setting up listeners...");
+
+    // ৩. Event Listeners সেটআপ
     marketTabs.forEach(tab => {
-        tab.addEventListener('click', handleMarketChange);
+        tab.addEventListener('click', (e) => {
+            marketTabs.forEach(t => t.classList.remove('active'));
+            e.target.classList.add('active');
+            currentMarket = e.target.dataset.market;
+            updateCurrencyPairs();
+        });
     });
 
     timeframeBtns.forEach(btn => {
-        btn.addEventListener('click', handleTimeframeChange);
+        btn.addEventListener('click', (e) => {
+            timeframeBtns.forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            selectedTimeframe = parseInt(e.target.dataset.time);
+        });
     });
 
-    getSignalBtn.addEventListener('click', handleGetSignal);
+    getSignalBtn.addEventListener('click', async () => {
+        getSignalBtn.disabled = true;
+        if(loadingAnimation) loadingAnimation.classList.add('active');
+        
+        const loadingTime = Math.floor(Math.random() * 2000) + 2000;
+        await new Promise(resolve => setTimeout(resolve, loadingTime));
+        
+        const signal = generateSignal(currencySelect.value, selectedTimeframe);
+        
+        if(loadingAnimation) loadingAnimation.classList.remove('active');
+        displaySignal(signal, signalDisplay, currencySelect.value, selectedTimeframe);
+        
+        getSignalBtn.disabled = false;
+    });
 
-    // Popup Click Listeners
+    // Popup Logic
     document.addEventListener('click', function(e) {
         const target = e.target;
-        if (target && target.id === 'popupJoinBtn') {
+        if (target && (target.id === 'popupJoinBtn' || target.id === 'popupCloseBtn')) {
             e.preventDefault();
             window.open('https://t.me/rstradersiam', '_blank');
-            const popup = document.getElementById('postSignalPopup');
-            if (popup) { popup.classList.remove('show'); popup.style.display = 'none'; }
-        }
-        if (target && target.id === 'popupCloseBtn') {
-            e.preventDefault();
-            window.open('https://t.me/rstradersiam', '_blank');
-            const popup = document.getElementById('postSignalPopup');
-            if (popup) { popup.classList.remove('show'); popup.style.display = 'none'; }
+            if (postSignalPopup) {
+                postSignalPopup.classList.remove('show');
+                postSignalPopup.style.display = 'none';
+            }
         }
     });
 
-    // Initial Setup
+    // ৪. Initial Setup
     updateCurrencyPairs();
     
-    // Add gradient to loading circle
+    // Gradient for Loading Circle
     const svgGradient = `
         <defs>
             <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -119,20 +134,27 @@ window.initializeApp = function() {
         svg.innerHTML = svgGradient + svg.innerHTML;
     });
 
-    // Wake Lock
+    // ৫. Session Checker
+    if (sessionInterval) clearInterval(sessionInterval);
+    sessionInterval = setInterval(() => {
+        const lt = localStorage.getItem('phoenixBotLoginTime');
+        if (!lt) { location.reload(); return; }
+        if ((Date.now() - parseInt(lt)) >= oneHour) {
+            localStorage.clear();
+            alert('Session Expired');
+            location.reload();
+        }
+    }, 60000);
+
+    // ৬. Wake Lock
     requestWakeLock();
     
-    console.log("App Initialized Successfully!");
+    console.log("✨ App Initialized Successfully!");
 };
 
-function handleMarketChange(e) {
-    marketTabs.forEach(tab => tab.classList.remove('active'));
-    e.target.classList.add('active');
-    currentMarket = e.target.dataset.market;
-    updateCurrencyPairs();
-}
-
+// Helper Functions
 function updateCurrencyPairs() {
+    const currencySelect = document.getElementById('currencySelect');
     if (!currencySelect) return;
     const pairs = currencyPairs[currentMarket];
     currencySelect.innerHTML = '';
@@ -144,97 +166,64 @@ function updateCurrencyPairs() {
     });
 }
 
-function handleTimeframeChange(e) {
-    timeframeBtns.forEach(btn => btn.classList.remove('active'));
-    e.target.classList.add('active');
-    selectedTimeframe = parseInt(e.target.dataset.time);
-}
-
-async function handleGetSignal() {
-    if (!getSignalBtn || !loadingAnimation) return;
-    
-    getSignalBtn.disabled = true;
-    loadingAnimation.classList.add('active');
-    
-    const loadingTime = Math.floor(Math.random() * 2000) + 2000;
-    await sleep(loadingTime);
-    
-    const signal = generateSignal();
-    
-    loadingAnimation.classList.remove('active');
-    displaySignal(signal);
-    
-    getSignalBtn.disabled = false;
-}
-
-function generateSignal() {
-    const selectedPair = currencySelect ? currencySelect.value : "EUR/USD (OTC)";
+function generateSignal(pair, time) {
     const direction = Math.random() > 0.5 ? 'up' : 'down';
-    const minutes = Math.floor(selectedTimeframe / 60);
-    const seconds = selectedTimeframe % 60;
-    const timeDisplay = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-
+    const minutes = Math.floor(time / 60);
+    const seconds = time % 60;
     return {
-        pair: selectedPair,
+        pair: pair,
         direction: direction,
-        time: timeDisplay,
-        timeSeconds: selectedTimeframe
+        time: `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
+        timeSeconds: time
     };
 }
 
-function displaySignal(signal) {
-    if (!signalDisplay) return;
+function displaySignal(signal, container, originalPair, originalTime) {
+    if (!container) return;
 
     const directionText = signal.direction === 'up' ? '↑' : '↓';
     const directionClass = signal.direction === 'up' ? 'up' : 'down';
     const directionName = signal.direction === 'up' ? 'CALL (UP)' : 'PUT (DOWN)';
+    const color = signal.direction === 'up' ? '#38ef7d' : '#ff6a00';
 
-    const signalHTML = `
+    container.innerHTML = `
         <div class="signal-result">
             <div class="signal-info">
                 <div class="signal-pair">${signal.pair}</div>
                 <div class="signal-time">Time: ${signal.time}</div>
             </div>
             <div class="signal-direction">
-                <div class="direction-arrow ${directionClass}">
-                    ${directionText}
-                </div>
+                <div class="direction-arrow ${directionClass}">${directionText}</div>
             </div>
             <div class="signal-action">
-                <p style="margin-top: 20px; font-size: 1.2rem; font-weight: 600; color: ${signal.direction === 'up' ? '#38ef7d' : '#ff6a00'};">
+                <p style="margin-top: 20px; font-size: 1.2rem; font-weight: 600; color: ${color};">
                     ${directionName}
                 </p>
             </div>
         </div>
     `;
 
-    signalDisplay.innerHTML = signalHTML;
-
-    const timeEl = signalDisplay.querySelector('.signal-time');
-    const seconds = signal.timeSeconds || selectedTimeframe;
-
+    const timeEl = container.querySelector('.signal-time');
+    
     setTimeout(() => {
-        startCountdown(seconds, timeEl).then(() => {
-            if(timeEl) timeEl.textContent = `Time: ${formatMMSS(seconds)}`;
-            showResultMessage();
+        startCountdown(signal.timeSeconds, timeEl).then(() => {
+            if(timeEl) timeEl.textContent = `Time: ${formatMMSS(originalTime)}`;
+            showResultMessage(container);
+            
+            // Popup Trigger
+            let count = parseInt(localStorage.getItem('phoenixSignalCount') || '0', 10);
+            count++;
+            localStorage.setItem('phoenixSignalCount', String(count));
+            if (count >= 3) {
+                localStorage.setItem('phoenixSignalCount', '0');
+                const popup = document.getElementById('postSignalPopup');
+                if (popup) {
+                    popup.classList.add('show');
+                    popup.style.display = 'block';
+                }
+            }
         });
     }, 700);
-
-    let signalCounter = parseInt(localStorage.getItem('phoenixSignalCount') || '0', 10);
-    signalCounter += 1;
-    localStorage.setItem('phoenixSignalCount', String(signalCounter));
-    const popupAfter = 3;
-    
-    if (signalCounter >= popupAfter) {
-        localStorage.setItem('phoenixSignalCount', '0');
-        setTimeout(() => {
-            const popup = document.getElementById('postSignalPopup');
-            if (popup) {
-                popup.classList.add('show');
-                popup.style.display = 'block';
-            }
-        }, 600);
-    }
 }
 
 function formatMMSS(totalSeconds) {
@@ -260,22 +249,19 @@ function startCountdown(totalSeconds, element) {
     });
 }
 
-function showResultMessage() {
-    if (!signalDisplay) return;
-    const resultHtml = `
+function showResultMessage(container) {
+    if (!container) return;
+    const html = `
         <div class="result-text">
             <div class="result-line">Your signal result has arrived</div>
             <div class="result-sub">Ready for the next signal</div>
         </div>`;
-    const existing = signalDisplay.innerHTML;
-    signalDisplay.innerHTML = existing + resultHtml;
-    signalDisplay.classList.add('result-shown');
-    setTimeout(() => signalDisplay.classList.remove('result-shown'), 2200);
+    container.innerHTML += html;
+    container.classList.add('result-shown');
+    setTimeout(() => container.classList.remove('result-shown'), 2200);
 }
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
+function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
 let wakeLock = null;
 async function requestWakeLock() {
@@ -283,31 +269,9 @@ async function requestWakeLock() {
         if ('wakeLock' in navigator) {
             wakeLock = await navigator.wakeLock.request('screen');
         }
-    } catch (err) {
-        console.log('Wake Lock error:', err);
-    }
+    } catch (err) { console.log('Wake Lock error:', err); }
 }
 
 document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-        requestWakeLock();
-    }
+    if (document.visibilityState === 'visible') requestWakeLock();
 });
-
-function checkSession() {
-    const loginTime = localStorage.getItem('phoenixBotLoginTime');
-    if (!loginTime) {
-        location.reload();
-        return;
-    }
-    const currentTime = Date.now();
-    const timeDifference = currentTime - parseInt(loginTime);
-    const oneHour = 60 * 60 * 1000;
-    
-    if (timeDifference >= oneHour) {
-        localStorage.removeItem('phoenixBotJoined');
-        localStorage.removeItem('phoenixBotLoginTime');
-        alert('Your session has expired. Please login again.');
-        location.reload(); // Redirect to login by reloading the single page
-    }
-}
