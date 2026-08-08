@@ -63,20 +63,20 @@ document.addEventListener('DOMContentLoaded', () => {
             loadingEl.style.color = "#38ef7d";
             
             setTimeout(() => {
-                // Hide Login Screen via CSS class on body (handled by Code.gs injected styles)
+                // Hide Login Screen
                 document.body.classList.add('loaded');
                 document.body.classList.add('loading-app');
                 
                 // Initialize App Logic
-                if (typeof initializeApp === 'function') {
-                    initializeApp();
+                if (typeof window.initializeApp === 'function') {
+                    window.initializeApp();
                 } else {
                     // If app.js not loaded yet, trigger loader and wait
                     if (typeof loadAppScripts === 'function') loadAppScripts();
                     
                     const checkInterval = setInterval(() => {
-                        if (typeof initializeApp === 'function') {
-                            initializeApp();
+                        if (typeof window.initializeApp === 'function') {
+                            window.initializeApp();
                             clearInterval(checkInterval);
                         }
                     }, 200);
@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.disabled = false;
             if(btnText) btnText.textContent = 'UNLOCK BOT';
             loadingEl.style.display = 'none';
-            loadingEl.textContent = "Verifying Secure Connection..."; // Reset text
+            loadingEl.textContent = "Verifying Secure Connection...";
             loadingEl.style.color = "#00d2ff";
         }
     });
