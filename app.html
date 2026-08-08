@@ -1,0 +1,155 @@
+
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradeR SiaM BOT</title>
+    <link rel="icon" type="image/jpeg" href="https://i.ibb.co.com/zhYVV82d/photo-6302877040054572652-x.jpg">
+    <link rel="stylesheet" href="app.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Background Animation -->
+    <div class="background-animation">
+        <div class="candle"></div>
+        <div class="candle"></div>
+        <div class="candle"></div>
+        <div class="candle"></div>
+        <div class="candle"></div>
+    </div>
+
+    <!-- Main Trading Screen -->
+    <div class="header">
+        <div class="header-top">
+            <img src="https://images.seeklogo.com/logo-png/43/1/quotex-io-logo-png_seeklogo-431725.png" alt="Quotex" class="quotex-logo">
+            <h2 class="gradient-text">TradeR SiaM Bot</h2>
+            <div class="telegram-link">
+                <a href="https://t.me/rstradersiam" target="_blank">@rstradersiam</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- Market Selection -->
+        <div class="market-section">
+            <h3>Select Market</h3>
+            <div class="market-tabs">
+                <button class="market-tab active" data-market="otc">OTC Market</button>
+                <button class="market-tab" data-market="real">Real Market</button>
+            </div>
+        </div>
+
+        <!-- Currency Pair Selection -->
+        <div class="currency-section">
+            <h3>Currency Pair</h3>
+            <select id="currencySelect" class="currency-select">
+                <!-- OTC pairs -->
+                <option value="NZD/CHF (OTC)">NZD/CHF (OTC)</option>
+                <option value="USD/BRL (OTC)">USD/BRL (OTC)</option>
+                <option value="EUR/GBP (OTC)">EUR/GBP (OTC)</option>
+                <option value="GBP/AUD (OTC)">GBP/AUD (OTC)</option>
+                <option value="GBP/JPY (OTC)">GBP/JPY (OTC)</option>
+                <option value="GBP/USD (OTC)">GBP/USD (OTC)</option>
+                <option value="USD/JPY (OTC)">USD/JPY (OTC)</option>
+                <option value="USD/ZAR (OTC)">USD/ZAR (OTC)</option>
+                <option value="EUR/AUD (OTC)">EUR/AUD (OTC)</option>
+                <option value="EUR/CAD (OTC)">EUR/CAD (OTC)</option>
+                <option value="EUR/JPY (OTC)">EUR/JPY (OTC)</option>
+                <option value="EUR/USD (OTC)">EUR/USD (OTC)</option>
+                <option value="GBP/CAD (OTC)">GBP/CAD (OTC)</option>
+                <option value="GBP/CHF (OTC)">GBP/CHF (OTC)</option>
+                <option value="USD/CAD (OTC)">USD/CAD (OTC)</option>
+                <option value="USD/CHF (OTC)">USD/CHF (OTC)</option>
+                <option value="AUD/NZD (OTC)">AUD/NZD (OTC)</option>
+                <option value="CAD/CHF (OTC)">CAD/CHF (OTC)</option>
+                <option value="CHF/JPY (OTC)">CHF/JPY (OTC)</option>
+                <option value="EUR/SGD (OTC)">EUR/SGD (OTC)</option>
+                <option value="USD/MXN (OTC)">USD/MXN (OTC)</option>
+                <option value="USD/COP (OTC)">USD/COP (OTC)</option>
+                <option value="NZD/CAD (OTC)">NZD/CAD (OTC)</option>
+                <option value="USD/ARS (OTC)">USD/ARS (OTC)</option>
+                <option value="EUR/CHF (OTC)">EUR/CHF (OTC)</option>
+                <option value="USD/IDR (OTC)">USD/IDR (OTC)</option>
+                <option value="USD/NGN (OTC)">USD/NGN (OTC)</option>
+                <option value="AUD/CAD (OTC)">AUD/CAD (OTC)</option>
+                <option value="AUD/JPY (OTC)">AUD/JPY (OTC)</option>
+                <option value="AUD/USD (OTC)">AUD/USD (OTC)</option>
+                <option value="USD/BDT (OTC)">USD/BDT (OTC)</option>
+                <option value="USD/PHP (OTC)">USD/PHP (OTC)</option>
+                <option value="USD/PKR (OTC)">USD/PKR (OTC)</option>
+                <option value="USD/TRY (OTC)">USD/TRY (OTC)</option>
+            </select>
+        </div>
+
+        <!-- Time Frame Selection -->
+        <div class="timeframe-section">
+            <h3>Select Timeframe</h3>
+            <div class="timeframe-grid">
+                <button class="timeframe-btn active" data-time="5">00:05</button>
+                <button class="timeframe-btn" data-time="10">00:10</button>
+                <button class="timeframe-btn" data-time="15">00:15</button>
+                <button class="timeframe-btn" data-time="30">00:30</button>
+                <button class="timeframe-btn" data-time="60">01:00</button>
+                <button class="timeframe-btn" data-time="120">02:00</button>
+                <button class="timeframe-btn" data-time="300">05:00</button>
+            </div>
+        </div>
+
+        <!-- Martingale Warning -->
+        <div class="martingale-notice">
+            <p>⚠️ Use One-Step MTG If You Lose!</p>
+        </div>
+
+        <!-- Signal Display -->
+        <div class="signal-section">
+            <div id="signalDisplay" class="signal-display">
+                <div class="signal-placeholder">
+                    <p>Click "Get Signal" to generate trading signal</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Get Signal Button -->
+        <button id="getSignalBtn" class="get-signal-btn">
+            <span class="btn-text">Get Signal</span>
+            <span class="btn-shine"></span>
+        </button>
+
+        <!-- Loading Animation -->
+        <div id="loadingAnimation" class="loading-container">
+            <div class="loading-logo">
+                <img src="https://i.ibb.co.com/zhYVV82d/photo-6302877040054572652-x.jpg" alt="TradeR SiaM Bot">
+                <svg class="loading-circle" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45"></circle>
+                </svg>
+            </div>
+            <p class="loading-text">Analyzing Market...</p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Developed by <a href="https://t.me/RSSIAM23" target="_blank">@RSSIAM23</a></p>
+    </div>
+
+    <!-- Post-signal Popup (appears after N signals) -->
+    <div id="postSignalPopup" class="post-signal-popup">
+        <div class="popup-backdrop"></div>
+        <div class="popup-card">
+            <button id="popupCloseBtn" class="popup-close" aria-label="Close">✕</button>
+            <div class="popup-header">
+                <img src="https://i.ibb.co.com/zhYVV82d/photo-6302877040054572652-x.jpg" alt="Channel" class="popup-channel-logo">
+            </div>
+            <div class="popup-body">
+                <h3 class="popup-title">You have joined our Telegram channel</h3>
+                <p class="popup-text">Thank you for being with us — stay tuned for premium signals and updates.</p>
+                <a href="#" id="popupJoinBtn" class="popup-join-btn">Open Telegram Channel</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
