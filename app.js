@@ -1,34 +1,3 @@
-// Check if user is logged in and session is valid
-document.addEventListener('DOMContentLoaded', () => {
-    const hasJoined = localStorage.getItem('phoenixBotJoined');
-    const loginTime = localStorage.getItem('phoenixBotLoginTime');
-    
-    if (hasJoined !== 'true' || !loginTime) {
-        // Not logged in, redirect to login page
-        window.location.href = 'index.html';
-        return;
-    }
-    
-    // Check if session is still valid (within 1 hour)
-    const currentTime = Date.now();
-    const timeDifference = currentTime - parseInt(loginTime);
-    const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
-    
-    if (timeDifference >= oneHour) {
-        // Session expired, clear and redirect to login
-        localStorage.removeItem('phoenixBotJoined');
-        localStorage.removeItem('phoenixBotLoginTime');
-        window.location.href = 'index.html';
-        return;
-    }
-    
-    // Initialize app
-    initializeApp();
-    
-    // Set up session checker to run every minute
-    setInterval(checkSession, 60000); // Check every 1 minute
-});
-
 // Currency pairs data
 const currencyPairs = {
     otc: [
@@ -57,18 +26,56 @@ const currencyPairs = {
 
 // State management
 let currentMarket = 'otc';
-let selectedTimeframe = 5; // Default 5 seconds
+let selectedTimeframe = 5;
+let sessionInterval = null;
 
-// DOM Elements
-const marketTabs = document.querySelectorAll('.market-tab');
-const currencySelect = document.getElementById('currencySelect');
-const timeframeBtns = document.querySelectorAll('.timeframe-btn');
-const getSignalBtn = document.getElementById('getSignalBtn');
-const signalDisplay = document.getElementById('signalDisplay');
-const loadingAnimation = document.getElementById('loadingAnimation');
+// DOM Elements (Global scope e rakha hocche jate initializeApp e access kora jay)
+let marketTabs, currencySelect, timeframeBtns, getSignalBtn, signalDisplay, loadingAnimation;
 
-function initializeApp() {
-    // Event listeners
+// Main Initialization Function (এটি login.js থেকে কল হবে)
+window.initializeApp = function() {
+    console.log("App Initializing...");
+
+    // Session Check
+    const hasJoined = localStorage.getItem('phoenixBotJoined');
+    const loginTime = localStorage.getItem('phoenixBotLoginTime');
+    
+    if (hasJoined !== 'true' || !loginTime) {
+        alert("Session not found. Please login again.");
+        location.reload(); // Reload to show login
+        return;
+    }
+    
+    const currentTime = Date.now();
+    const timeDifference = currentTime - parseInt(loginTime);
+    const oneHour = 60 * 60 * 1000;
+    
+    if (timeDifference >= oneHour) {
+        localStorage.removeItem('phoenixBotJoined');
+        localStorage.removeItem('phoenixBotLoginTime');
+        alert('Your session has expired. Please login again.');
+        location.reload();
+        return;
+    }
+
+    // Setup Session Checker
+    if (sessionInterval) clearInterval(sessionInterval);
+    sessionInterval = setInterval(checkSession, 60000);
+
+    // Initialize DOM Elements (এখন এগুলো নিশ্চিতভাবে ডোমে আছে)
+    marketTabs = document.querySelectorAll('.market-tab');
+    currencySelect = document.getElementById('currencySelect');
+    timeframeBtns = document.querySelectorAll('.timeframe-btn');
+    getSignalBtn = document.getElementById('getSignalBtn');
+    signalDisplay = document.getElementById('signalDisplay');
+    loadingAnimation = document.getElementById('loadingAnimation');
+
+    if (!getSignalBtn || !signalDisplay) {
+        console.error("Critical App Elements Missing!");
+        return;
+    }
+
+    // Event Listeners
     marketTabs.forEach(tab => {
         tab.addEventListener('click', handleMarketChange);
     });
@@ -79,7 +86,24 @@ function initializeApp() {
 
     getSignalBtn.addEventListener('click', handleGetSignal);
 
-    // Update currency pairs based on default market
+    // Popup Click Listeners
+    document.addEventListener('click', function(e) {
+        const target = e.target;
+        if (target && target.id === 'popupJoinBtn') {
+            e.preventDefault();
+            window.open('https://t.me/rstradersiam', '_blank');
+            const popup = document.getElementById('postSignalPopup');
+            if (popup) { popup.classList.remove('show'); popup.style.display = 'none'; }
+        }
+        if (target && target.id === 'popupCloseBtn') {
+            e.preventDefault();
+            window.open('https://t.me/rstradersiam', '_blank');
+            const popup = document.getElementById('postSignalPopup');
+            if (popup) { popup.classList.remove('show'); popup.style.display = 'none'; }
+        }
+    });
+
+    // Initial Setup
     updateCurrencyPairs();
     
     // Add gradient to loading circle
@@ -94,26 +118,24 @@ function initializeApp() {
     document.querySelectorAll('.loading-circle').forEach(svg => {
         svg.innerHTML = svgGradient + svg.innerHTML;
     });
-}
+
+    // Wake Lock
+    requestWakeLock();
+    
+    console.log("App Initialized Successfully!");
+};
 
 function handleMarketChange(e) {
-    // Remove active class from all tabs
     marketTabs.forEach(tab => tab.classList.remove('active'));
-    
-    // Add active class to clicked tab
     e.target.classList.add('active');
-    
-    // Update current market
     currentMarket = e.target.dataset.market;
-    
-    // Update currency pairs dropdown
     updateCurrencyPairs();
 }
 
 function updateCurrencyPairs() {
+    if (!currencySelect) return;
     const pairs = currencyPairs[currentMarket];
     currencySelect.innerHTML = '';
-    
     pairs.forEach(pair => {
         const option = document.createElement('option');
         option.value = pair;
@@ -123,46 +145,31 @@ function updateCurrencyPairs() {
 }
 
 function handleTimeframeChange(e) {
-    // Remove active class from all buttons
     timeframeBtns.forEach(btn => btn.classList.remove('active'));
-    
-    // Add active class to clicked button
     e.target.classList.add('active');
-    
-    // Update selected timeframe
     selectedTimeframe = parseInt(e.target.dataset.time);
 }
 
 async function handleGetSignal() {
-    // Disable button
-    getSignalBtn.disabled = true;
+    if (!getSignalBtn || !loadingAnimation) return;
     
-    // Show loading animation
+    getSignalBtn.disabled = true;
     loadingAnimation.classList.add('active');
     
-    // Random loading time between 2-4 seconds
     const loadingTime = Math.floor(Math.random() * 2000) + 2000;
-    
     await sleep(loadingTime);
     
-    // Generate signal
     const signal = generateSignal();
     
-    // Hide loading animation
     loadingAnimation.classList.remove('active');
-    
-    // Display signal
     displaySignal(signal);
     
-    // Re-enable button
     getSignalBtn.disabled = false;
 }
 
 function generateSignal() {
-    const selectedPair = currencySelect.value;
+    const selectedPair = currencySelect ? currencySelect.value : "EUR/USD (OTC)";
     const direction = Math.random() > 0.5 ? 'up' : 'down';
-
-    // Format time as mm:ss from seconds
     const minutes = Math.floor(selectedTimeframe / 60);
     const seconds = selectedTimeframe % 60;
     const timeDisplay = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
@@ -176,6 +183,8 @@ function generateSignal() {
 }
 
 function displaySignal(signal) {
+    if (!signalDisplay) return;
+
     const directionText = signal.direction === 'up' ? '↑' : '↓';
     const directionClass = signal.direction === 'up' ? 'up' : 'down';
     const directionName = signal.direction === 'up' ? 'CALL (UP)' : 'PUT (DOWN)';
@@ -201,37 +210,33 @@ function displaySignal(signal) {
 
     signalDisplay.innerHTML = signalHTML;
 
-    // Start the delayed countdown 0.7s after the signal appears
     const timeEl = signalDisplay.querySelector('.signal-time');
     const seconds = signal.timeSeconds || selectedTimeframe;
 
-    // Immediately show mm:ss (already placed), then after 0.7s start reverse countdown
     setTimeout(() => {
         startCountdown(seconds, timeEl).then(() => {
-            // When countdown completes, freeze to original selected time and show result text
-            timeEl.textContent = `Time: ${formatMMSS(seconds)}`;
-            // result text
+            if(timeEl) timeEl.textContent = `Time: ${formatMMSS(seconds)}`;
             showResultMessage();
         });
     }, 700);
 
-    // Signal counter and popup trigger
     let signalCounter = parseInt(localStorage.getItem('phoenixSignalCount') || '0', 10);
     signalCounter += 1;
     localStorage.setItem('phoenixSignalCount', String(signalCounter));
-    const popupAfter = 3; // show popup after every 3 signals
+    const popupAfter = 3;
+    
     if (signalCounter >= popupAfter) {
         localStorage.setItem('phoenixSignalCount', '0');
-        // show popup slightly after result
         setTimeout(() => {
             const popup = document.getElementById('postSignalPopup');
-            if (popup) popup.classList.add('show');
-            popup && (popup.style.display = 'block');
+            if (popup) {
+                popup.classList.add('show');
+                popup.style.display = 'block';
+            }
         }, 600);
     }
 }
 
-// Helpers for countdown and result display
 function formatMMSS(totalSeconds) {
     const mm = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
     const ss = String(totalSeconds % 60).padStart(2, '0');
@@ -241,10 +246,10 @@ function formatMMSS(totalSeconds) {
 function startCountdown(totalSeconds, element) {
     return new Promise((resolve) => {
         let remaining = totalSeconds;
-        element.textContent = `Time: ${formatMMSS(remaining)}`;
+        if(element) element.textContent = `Time: ${formatMMSS(remaining)}`;
         const interval = setInterval(() => {
             remaining -= 1;
-            if (remaining >= 0) {
+            if (remaining >= 0 && element) {
                 element.textContent = `Time: ${formatMMSS(remaining)}`;
             }
             if (remaining <= 0) {
@@ -256,42 +261,22 @@ function startCountdown(totalSeconds, element) {
 }
 
 function showResultMessage() {
-    // display stylized result message inside signalDisplay
+    if (!signalDisplay) return;
     const resultHtml = `
         <div class="result-text">
             <div class="result-line">Your signal result has arrived</div>
             <div class="result-sub">Ready for the next signal</div>
         </div>`;
-    // Append result below current content
     const existing = signalDisplay.innerHTML;
     signalDisplay.innerHTML = existing + resultHtml;
-    // small transient highlight
     signalDisplay.classList.add('result-shown');
     setTimeout(() => signalDisplay.classList.remove('result-shown'), 2200);
 }
-
-// Popup wiring: join & close should open Telegram and close the popup
-document.addEventListener('click', function(e) {
-    const target = e.target;
-    if (target && target.id === 'popupJoinBtn') {
-        e.preventDefault();
-        window.open('https://t.me/rstradersiam', '_blank');
-        const popup = document.getElementById('postSignalPopup');
-        if (popup) { popup.classList.remove('show'); popup.style.display = 'none'; }
-    }
-    if (target && target.id === 'popupCloseBtn') {
-        e.preventDefault();
-        window.open('https://t.me/rstradersiam', '_blank');
-        const popup = document.getElementById('postSignalPopup');
-        if (popup) { popup.classList.remove('show'); popup.style.display = 'none'; }
-    }
-});
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Prevent screen from sleeping on mobile (optional)
 let wakeLock = null;
 async function requestWakeLock() {
     try {
@@ -303,35 +288,26 @@ async function requestWakeLock() {
     }
 }
 
-// Request wake lock when page is visible
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
         requestWakeLock();
     }
 });
 
-// Initial wake lock request
-requestWakeLock();
-
-// Function to check if session is still valid
 function checkSession() {
     const loginTime = localStorage.getItem('phoenixBotLoginTime');
-    
     if (!loginTime) {
-        // No login time found, redirect to login
-        window.location.href = 'index.html';
+        location.reload();
         return;
     }
-    
     const currentTime = Date.now();
     const timeDifference = currentTime - parseInt(loginTime);
-    const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
+    const oneHour = 60 * 60 * 1000;
     
     if (timeDifference >= oneHour) {
-        // Session expired
         localStorage.removeItem('phoenixBotJoined');
         localStorage.removeItem('phoenixBotLoginTime');
         alert('Your session has expired. Please login again.');
-        window.location.href = 'https://raw.githubusercontent.com/seyam4431-ai/faltu/refs/heads/main/login.html';
+        location.reload(); // Redirect to login by reloading the single page
     }
 }
